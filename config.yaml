@@ -1,0 +1,23 @@
+defaults:
+  - _self_
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
+
+agent:
+  lr: 0.001
+  gamma: 0.99
+  noise_scale: 0.1
+  hidden_dim: 128
+  buffer_size: 10000
+  batch_size: 128
+  on_policy: True
+  replay_buffer: False
+episodes: 1
+max_steps: 50
+env: 'Pendulum-v1'
+render_mode: "human"
