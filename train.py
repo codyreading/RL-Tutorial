@@ -39,7 +39,7 @@ def main(cfg):
             done = terminated or truncated
 
             # Update the agent
-            agent.update(state=state, reward=reward)
+            agent.update(state=state, action=action, reward=reward, next_state=next_state, done=done)
 
             # Quit if done
             if done:
