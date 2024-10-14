@@ -14,29 +14,38 @@ class Agent(nn.Module):
                  max_action,
                  lr,
                  gamma,
+                 tau,
                  noise_scale,
                  hidden_dim,
                  buffer_size,
                  batch_size,
                  on_policy,
                  replay_buffer,
+                 target_networks,
                  device):
         super().__init__()
         self.min_action = min_action
         self.max_action = max_action
         self.gamma = gamma
+        self.tau = tau
         self.noise_scale = noise_scale
         self.on_policy = on_policy
         self.replay_buffer = replay_buffer
+        self.target_networks = target_networks
         self.device = device
 
         # Setup networks and optimizers
         self.actor = Actor(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-        self.actor_target = Actor(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
         self.critic = Critic(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-        self.critic_target = Critic(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
         self.actor_optim = optim.Adam(self.actor.parameters(), lr=lr)
         self.critic_optim = optim.Adam(self.critic.parameters(), lr=lr)
+
+        if self.target_networks:
+            self.actor_target = Actor(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            self.critic_target = Critic(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+        else:
+            self.actor_target = self.actor
+            self.critic_target = self.critic
 
         # Setup large buffer is using replay buffer
         if replay_buffer:
@@ -111,5 +120,18 @@ class Agent(nn.Module):
         actor_loss.backward()
         self.actor_optim.step()
 
-        breakpoint()
         # Soft update target networks
+        if self.target_networks:
+            self.actor_target = self.soft_update(source=self.actor, target=self.actor_target)
+            self.critic_target = self.soft_update(source=self.critic, target=self.critic_target)
+
+    def soft_update(self, source, target):
+        """Softly copy weights"""
+        source_state_dict = source.state_dict()
+        target_state_dict = target.state_dict()
+
+        for key in source_state_dict.keys:
+            target_state_dict[key] = self.tau * source_state_dict[key] + (1 - self.tau) * target_state_dict[key]
+
+        target.load_state_dict(target_state_dict)
+        return target

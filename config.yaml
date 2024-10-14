@@ -11,12 +11,14 @@ hydra:
 agent:
   lr: 0.001
   gamma: 0.99
+  tau: 0.005
   noise_scale: 0.1
   hidden_dim: 128
   buffer_size: 10000
-  batch_size: 10
+  batch_size: 128
   on_policy: True
   replay_buffer: False
-episodes: 1
+  target_networks: False
+episodes: 50
 env: 'Pendulum-v1'
 render_mode: "human"

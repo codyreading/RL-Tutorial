@@ -91,3 +91,6 @@ dmypy.json
 
 # profiling
 .prof
+
+# custom
+*.png
