@@ -24,7 +24,9 @@ class Agent(nn.Module):
         super().__init__()
         self.min_action = min_action
         self.max_action = max_action
+        self.gamma = gamma
         self.noise_scale = noise_scale
+        self.on_policy = on_policy
         self.replay_buffer = replay_buffer
         self.device = device
 
@@ -39,13 +41,14 @@ class Agent(nn.Module):
         # Setup large buffer is using replay buffer
         if replay_buffer:
             self.buffer_size = buffer_size
+            self.batch_size = batch_size
 
         # Only keep the last batch elements otherwise
         else:
             self.buffer_size = batch_size
 
         # Create buffer
-        self.buffer = Buffer(self.buffer_size)
+        self.buffer = Buffer(buffer_size=self.buffer_size, device=device)
 
         # Reset
         self.reset()
@@ -70,33 +73,43 @@ class Agent(nn.Module):
         action = np.clip(action, self.min_action, self.max_action)
         return action
 
-    def update(self, state, action, reward, next_state, done):
-        self.buffer.add(state, action, reward, next_state, done)
+    def update(self, state, action, reward, next_state, next_action, done):
+
+        # Store data
+        self.buffer.add(state=state,
+                        action=action / self.max_action,
+                        reward=reward,
+                        next_state=next_state,
+                        next_action=next_action / self.max_action,
+                        done=done)
         self.cumulative_reward += reward
 
         if not self.replay_buffer and self.buffer.full():
-            breakpoint()
-            # TODO Get batch from buffer
-            self.optimize_step(state, action, reward, next_state, done)
+            batch = self.buffer.pop()
+            self.optimize_step(**batch)
+        elif self.replay_buffer and len(self.memory) > self.batch_size:
+            batch = self.buffer.sample(self.batch_size)
+            self.optimize_step(**batch)
 
-    def optimize_step(self, state, action, reward, next_state, done, next_action=None):
+    def optimize_step(self, state, action, reward, next_state, next_action, done):
         # Compute target
         with torch.no_grad():
             if not self.on_policy:
                 next_action = self.actor_target(next_state)
-            target_q = reward + self.gamma * (1 - done) * self.critic(state=next_state, action=next_action)
+            target_q = reward + self.gamma * (1 - done) * self.critic_target(state=next_state, action=next_action)
 
         # Critic update
         current_q = self.critic(state, action)
         critic_loss = F.mse_loss(current_q, target_q)
-        critic_optim.zero_grad()
+        self.critic_optim.zero_grad()
         critic_loss.backward()
-        critic_optim.step()
+        self.critic_optim.step()
 
         # Actor update
         actor_loss = -self.critic(state, self.actor(state)).mean()
-        actor_optim.zero_grad()
+        self.actor_optim.zero_grad()
         actor_loss.backward()
-        actor_optim.step()
+        self.actor_optim.step()
 
+        breakpoint()
         # Soft update target networks

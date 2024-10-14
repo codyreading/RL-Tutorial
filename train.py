@@ -29,25 +29,28 @@ def main(cfg):
     for e in tqdm(range(cfg.episodes), desc="Episodes"):
         state, info = env.reset()
         agent.reset()
+        action = agent.get_action(state)
 
         # Loop until done
         for s in count():
 
-            # Take a step
-            action = agent.get_action(state)
+            # Take a step.
             next_state, reward, terminated, truncated, info = env.step(action)
+            next_action = agent.get_action(next_state)
             done = terminated or truncated
 
             # Update the agent
-            agent.update(state=state, action=action, reward=reward, next_state=next_state, done=done)
+            agent.update(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action, done=done)
 
             # Quit if done
             if done:
                 break
 
+            # For next iteration
+            state = next_state
+            action = next_action
 
-        cumulative_reward = agent.get_cumulative_reward()
-        rewards.append(cumulative_reward)
+        rewards.append(agent.cumulative_reward)
 
     plot(rewards=rewards, name="part1")
     env.close()  # Close the environment when done
