@@ -45,7 +45,6 @@ def train(cfg, device, output_dir):
 
         rewards.append(agent.cumulative_reward)
         pbar.set_postfix({"Cumulative Reward": f"{agent.cumulative_reward:.2f}"})
-        pbar.update(1)
 
     env.close()  # Close the environment when done
 
