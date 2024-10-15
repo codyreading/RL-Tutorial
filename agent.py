@@ -1,10 +1,13 @@
+import random
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+
 from model import Actor, Critic
 from buffer import Buffer
+from ou_noise import OUNoise
 
 class Agent(nn.Module):
     def __init__(self,
@@ -12,37 +15,39 @@ class Agent(nn.Module):
                  action_dim,
                  min_action,
                  max_action,
+                 seed,
                  lr,
                  gamma,
                  tau,
-                 noise_scale,
-                 hidden_dim,
+                 fc1_dim,
+                 fc2_dim,
                  buffer_size,
                  batch_size,
                  on_policy,
                  replay_buffer,
                  target_networks,
+                 noise,
                  device):
         super().__init__()
         self.min_action = min_action
         self.max_action = max_action
+        self.seed = random.seed(seed)
         self.gamma = gamma
         self.tau = tau
-        self.noise_scale = noise_scale
         self.on_policy = on_policy
         self.replay_buffer = replay_buffer
         self.target_networks = target_networks
         self.device = device
 
         # Setup networks and optimizers
-        self.actor = Actor(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-        self.critic = Critic(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+        self.actor = Actor(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
+        self.critic = Critic(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
         self.actor_optim = optim.Adam(self.actor.parameters(), lr=lr)
         self.critic_optim = optim.Adam(self.critic.parameters(), lr=lr)
 
         if self.target_networks:
-            self.actor_target = Actor(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
-            self.critic_target = Critic(state_dim=state_dim, action_dim=action_dim, hidden_dim=hidden_dim)
+            self.actor_target = Actor(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
+            self.critic_target = Critic(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
         else:
             self.actor_target = self.actor
             self.critic_target = self.critic
@@ -57,7 +62,10 @@ class Agent(nn.Module):
             self.buffer_size = batch_size
 
         # Create buffer
-        self.buffer = Buffer(buffer_size=self.buffer_size, device=device)
+        self.buffer = Buffer(buffer_size=self.buffer_size, device=device, seed=seed)
+
+        # Noise process
+        self.noise = OUNoise(size=action_dim, seed=seed, device=device, **noise)
 
         # Reset
         self.reset()
@@ -74,17 +82,20 @@ class Agent(nn.Module):
         self.cumulative_reward = 0.0
 
     def get_action(self, state):
-        # Get action
-        state_tensor = torch.as_tensor(state).to(self.device).unsqueeze(0)
-        action = self.actor(state_tensor)
+        state_tensor = torch.as_tensor(state).to(self.device)
 
-        # Add noise
-        if self.training:
-            noise = self.noise_scale * torch.randn_like(action)
-            action = action + noise
+        # Get action
+        with torch.no_grad():
+            if self.training:
+                self.actor.eval()
+                action = self.actor(state_tensor)
+                self.actor.train()
+                action += self.noise.sample()
+            else:
+                action = self.actor(state_tensor)
 
         # Get action compatible with env
-        action = action.detach().cpu().numpy()[0]
+        action = action.detach().cpu().numpy()
         action *= self.max_action # Scale to [-2, 2]
         action = np.clip(action, self.min_action, self.max_action)
         return action

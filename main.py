@@ -86,7 +86,6 @@ def main(cfg):
     # Setup
     device = torch.device(
         "cuda" if torch.cuda.is_available() else
-        "mps" if torch.backends.mps.is_available() else
         "cpu"
     )
     output_dir = Path(cfg.output_dir) / cfg.name

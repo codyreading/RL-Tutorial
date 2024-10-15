@@ -9,17 +9,22 @@ hydra:
     dir: .
 
 agent:
+  seed: 2
   lr: 0.001
   gamma: 0.99
   tau: 0.005
-  noise_scale: 0.1
-  hidden_dim: 128
-  buffer_size: 10000
+  fc1_dim: 400
+  fc2_dim: 300
+  buffer_size: 100000
   batch_size: 128
   on_policy: False
   replay_buffer: True
   target_networks: True
-episodes: 1000
+  noise:
+    mu: 0.0
+    theta: 0.15
+    sigma: 0.2
+episodes: 500
 env: 'Pendulum-v1'
 output_dir: output
 name: "part4"
