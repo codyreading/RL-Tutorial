@@ -10,9 +10,10 @@ hydra:
 
 agent:
   seed: 2
-  lr: 0.001
+  lr_actor: 0.0001
+  lr_critic: 0.001
   gamma: 0.99
-  tau: 0.005
+  tau: 0.001
   fc1_dim: 400
   fc2_dim: 300
   buffer_size: 100000

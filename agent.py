@@ -16,7 +16,8 @@ class Agent(nn.Module):
                  min_action,
                  max_action,
                  seed,
-                 lr,
+                 lr_actor,
+                 lr_critic,
                  gamma,
                  tau,
                  fc1_dim,
@@ -42,8 +43,9 @@ class Agent(nn.Module):
         # Setup networks and optimizers
         self.actor = Actor(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
         self.critic = Critic(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
-        self.actor_optim = optim.Adam(self.actor.parameters(), lr=lr)
-        self.critic_optim = optim.Adam(self.critic.parameters(), lr=lr)
+        self.actor_optim = optim.Adam(self.actor.parameters(), lr=lr_actor)
+        self.critic_optim = optim.Adam(self.critic.parameters(), lr=lr_critic)
+
 
         if self.target_networks:
             self.actor_target = Actor(state_dim=state_dim, action_dim=action_dim, fc1_dim=fc1_dim, fc2_dim=fc2_dim, seed=seed)
