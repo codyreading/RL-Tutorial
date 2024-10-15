@@ -62,9 +62,16 @@ class Agent(nn.Module):
         # Reset
         self.reset()
 
+    def load_weights(self, output_dir):
+        self.actor.load_state_dict(torch.load(output_dir / 'actor.pth', weights_only=True))
+        self.critic.load_state_dict(torch.load(output_dir / 'critic.pth', weights_only=True))
+
+    def save_weights(self, output_dir):
+        torch.save(self.actor.state_dict(), output_dir / 'actor.pth')
+        torch.save(self.critic.state_dict(), output_dir / 'critic.pth')
+
     def reset(self):
         self.cumulative_reward = 0.0
-        self.buffer.clear()
 
     def get_action(self, state):
         # Get action
@@ -96,7 +103,7 @@ class Agent(nn.Module):
         if not self.replay_buffer and self.buffer.full():
             batch = self.buffer.pop()
             self.optimize_step(**batch)
-        elif self.replay_buffer and len(self.memory) > self.batch_size:
+        elif self.replay_buffer and len(self.buffer) > self.batch_size:
             batch = self.buffer.sample(self.batch_size)
             self.optimize_step(**batch)
 
@@ -130,7 +137,7 @@ class Agent(nn.Module):
         source_state_dict = source.state_dict()
         target_state_dict = target.state_dict()
 
-        for key in source_state_dict.keys:
+        for key in source_state_dict.keys():
             target_state_dict[key] = self.tau * source_state_dict[key] + (1 - self.tau) * target_state_dict[key]
 
         target.load_state_dict(target_state_dict)

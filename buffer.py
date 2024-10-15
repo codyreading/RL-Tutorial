@@ -44,6 +44,7 @@ class Buffer:
 
     def sample(self, batch_size):
         data = random.sample(self.memory, batch_size)
+        data = self.transition(*zip(*data))
         data = self.stack(data)
         data = self.to_torch(data)
         return data

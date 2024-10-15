@@ -16,9 +16,12 @@ agent:
   hidden_dim: 128
   buffer_size: 10000
   batch_size: 128
-  on_policy: True
-  replay_buffer: False
-  target_networks: False
-episodes: 50
+  on_policy: False
+  replay_buffer: True
+  target_networks: True
+episodes: 1000
 env: 'Pendulum-v1'
-render_mode: "human"
+output_dir: output
+name: "part4"
+infer_steps: 200
+fps: 30
