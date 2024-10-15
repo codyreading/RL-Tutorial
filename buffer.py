@@ -4,10 +4,11 @@ import torch
 from collections import namedtuple, deque
 
 class Buffer:
-    def __init__(self, buffer_size, device):
+    def __init__(self, buffer_size, device, seed):
         self.memory = deque(maxlen=buffer_size)
         self.transition = namedtuple('transition', ['state', 'action', 'reward', 'next_state', 'next_action', 'done'])
         self.device = device
+        self.seed = random.seed(seed)
         self.dtype = torch.float32
 
     def __len__(self):
